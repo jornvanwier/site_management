@@ -5,9 +5,11 @@ extern crate argon2rs;
 extern crate rand;
 extern crate r2d2;
 extern crate r2d2_diesel;
+extern crate rocket;
 
 pub mod models;
 pub mod schema;
+pub mod user_login;
 mod argon2;
 
 use diesel::prelude::*;
@@ -21,6 +23,8 @@ use self::models::*;
 use std::sync::Arc;
 
 pub type ConnectionPool =  Arc<r2d2::Pool<ConnectionManager<PgConnection>>>;
+pub const SESSION_LENGTH: u64 = 60 * 60 * 48;
+pub const SESSION_COOKIE: &'static str = "SESSION_KEY";
 
 pub fn establish_connection_pool() -> r2d2::Pool<ConnectionManager<PgConnection>> {
     dotenv().ok();

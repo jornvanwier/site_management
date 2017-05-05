@@ -6,13 +6,14 @@ use std::time::{Duration, SystemTime};
 use diesel::pg::PgConnection;
 use diesel::result::Error;
 use diesel::prelude::*;
+use SESSION_LENGTH;
 
 #[derive(Debug, Queryable)]
 pub struct User {
     pub id: i32,
     pub username: String,
     pub password: String,
-    pub salt: String
+    pub salt: String,
 }
 
 #[derive(Insertable)]
@@ -20,7 +21,7 @@ pub struct User {
 pub struct NewUser<'a> {
     pub username: &'a str,
     pub password: String,
-    pub salt: String
+    pub salt: String,
 }
 
 impl<'a> NewUser<'a> {
@@ -30,7 +31,7 @@ impl<'a> NewUser<'a> {
         NewUser {
             username: username,
             password: password_hash,
-            salt: salt
+            salt: salt,
         }
     }
 }
@@ -39,13 +40,14 @@ impl<'a> NewUser<'a> {
 pub struct Session {
     pub key: String,
     user_id: i32,
-    pub expire_date: SystemTime
+    pub expire_date: SystemTime,
 }
 
 impl Session {
     pub fn user(&self, conn: &PgConnection) -> Result<User, Error> {
         use schema::users;
-        users::table.filter(users::id.eq(self.user_id))
+        users::table
+            .filter(users::id.eq(self.user_id))
             .first::<User>(conn)
     }
 }
@@ -55,19 +57,20 @@ impl Session {
 pub struct NewSession {
     pub key: String,
     pub user_id: i32,
-    pub expire_date: SystemTime
+    pub expire_date: SystemTime,
 }
 
 impl NewSession {
     pub fn new(user_id: i32) -> NewSession {
         let key = rand_str(32);
         // Keep sessions for 48 hours
-        let expire_date = SystemTime::now() + Duration::from_secs(60 * 60 * 48);
+        let expire_date = SystemTime::now() + Duration::from_secs(SESSION_LENGTH);
 
         NewSession {
             key: key,
             user_id: user_id,
-            expire_date: expire_date
+            expire_date: expire_date,
         }
     }
 }
+

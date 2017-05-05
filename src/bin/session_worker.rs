@@ -8,12 +8,10 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 
 pub fn init(pool: Arc<r2d2::Pool<ConnectionManager<PgConnection>>>) {
-    thread::spawn(move || {
-        loop {
-            check_expiration(&pool);
-            thread::sleep(Duration::from_secs(60));
-        }
-    });
+    thread::spawn(move || loop {
+                      check_expiration(&pool);
+                      thread::sleep(Duration::from_secs(60));
+                  });
 }
 
 fn check_expiration(pool: &r2d2::Pool<ConnectionManager<PgConnection>>) {
@@ -21,10 +19,11 @@ fn check_expiration(pool: &r2d2::Pool<ConnectionManager<PgConnection>>) {
 
     if let Ok(conn) = pool.get() {
         match diesel::delete(sessions::table.filter(sessions::expire_date.lt(SystemTime::now())))
-            .execute(&*conn) {
-                Ok(n) if n > 0 => println!("Deleted {} sessions after expiration", n),
-                Ok(_) => {},
-                Err(e) => println!("Error deleted sessions: {}", e)
-            }
+                  .execute(&*conn) {
+            Ok(n) if n > 0 => println!("Deleted {} sessions after expiration", n),
+            Ok(_) => {}
+            Err(e) => println!("Error deleted sessions: {}", e),
+        }
     }
 }
+

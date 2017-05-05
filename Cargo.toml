@@ -22,6 +22,10 @@ version = "*"
 default-features = false
 features = ["handlebars_templates"]
 
+[lib]
+name = "site_management"
+path = "src/lib.rs"
+
 [[bin]]
 name = "bin"
 path = "src/bin/main.rs"

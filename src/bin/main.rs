@@ -7,7 +7,6 @@ extern crate r2d2_diesel;
 extern crate rocket;
 extern crate rocket_contrib;
 extern crate serde_json;
-#[macro_use] extern crate serde_derive;
 extern crate site_management;
 
 use self::site_management::*;
@@ -23,9 +22,15 @@ fn main() {
     rocket::ignite()
         .mount("/", routes![
             routes::pages,
+            routes::login,
+            routes::login_reason,
+            routes::logout,
             routes::auth,
             routes::javascript_files,
             routes::css_files])
+        .catch(errors![
+            routes::unauthorized
+        ])
         .manage(pool)
         .launch();
 }
