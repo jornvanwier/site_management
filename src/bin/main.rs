@@ -9,14 +9,13 @@ extern crate rocket_contrib;
 extern crate serde_json;
 extern crate site_management;
 
-use self::site_management::*;
-use std::sync::Arc;
-
 mod session_worker;
 mod routes;
 
+use self::site_management::*;
+
 fn main() {
-    let pool = Arc::new(establish_connection_pool());
+    let pool = establish_connection_pool();
     session_worker::init(pool.clone());
 
     rocket::ignite()

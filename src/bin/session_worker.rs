@@ -1,13 +1,13 @@
 use std::thread;
 use std::time::{SystemTime, Duration};
-use std::sync::Arc;
 use r2d2;
 use r2d2_diesel::*;
 use diesel;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use site_management::ConnectionPool;
 
-pub fn init(pool: Arc<r2d2::Pool<ConnectionManager<PgConnection>>>) {
+pub fn init(pool: ConnectionPool) {
     thread::spawn(move || loop {
                       check_expiration(&pool);
                       thread::sleep(Duration::from_secs(60));

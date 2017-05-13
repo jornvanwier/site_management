@@ -13,6 +13,21 @@ pub struct UserLogin {
     pub user: User,
 }
 
+impl UserLogin {
+    pub fn from_key(key: String, pool: &ConnectionPool)-> request::Outcome<Self, String> {
+        let conn = pool.get().unwrap();
+        use schema::sessions;
+        if let Ok(session) = sessions::table
+                .filter(sessions::key.eq(key))
+                .first::<Session>(&*conn) {
+            if let Ok(user) = session.user(&*conn) {
+                return Success(UserLogin { session, user });
+            }
+        }        
+        Failure((Status::Unauthorized, "Couldn't parse session key".to_string()))
+    }
+}
+
 impl<'a, 'r> FromRequest<'a, 'r> for UserLogin {
     type Error = String;
 
@@ -22,17 +37,8 @@ impl<'a, 'r> FromRequest<'a, 'r> for UserLogin {
                 .find(SESSION_COOKIE)
                 .map(|c| c.value().to_string()) {
             if let Outcome::Success(pool) =
-                <State<ConnectionPool> as FromRequest>::from_request(req) {
-                let conn = pool.get().unwrap();
-                use schema::sessions;
-                if let Ok(session) = sessions::table
-                       .filter(sessions::key.eq(session_key))
-                       .first::<Session>(&*conn) {
-                    if let Ok(user) = session.user(&*conn) {
-                        return Success(UserLogin { session, user });
-                    }
-                }
-
+                State::<ConnectionPool>::from_request(req) {
+                    return UserLogin::from_key(session_key, &*pool)
             }
 
         }

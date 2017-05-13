@@ -46,9 +46,12 @@ pub struct Session {
 impl Session {
     pub fn user(&self, conn: &PgConnection) -> Result<User, Error> {
         use schema::users;
-        users::table
+        let mut user = users::table
             .filter(users::id.eq(self.user_id))
-            .first::<User>(conn)
+            .first::<User>(conn)?;
+        
+        user.username = user.username.trim().to_string();
+        Ok(user)
     }
 }
 

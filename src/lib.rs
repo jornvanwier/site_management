@@ -26,7 +26,7 @@ pub type ConnectionPool =  Arc<r2d2::Pool<ConnectionManager<PgConnection>>>;
 pub const SESSION_LENGTH: u64 = 60 * 60 * 48;
 pub const SESSION_COOKIE: &'static str = "SESSION_KEY";
 
-pub fn establish_connection_pool() -> r2d2::Pool<ConnectionManager<PgConnection>> {
+pub fn establish_connection_pool() -> Arc<r2d2::Pool<ConnectionManager<PgConnection>>> {
     dotenv().ok();
 
     let database_url = env::var("DATABASE_URL")
@@ -34,7 +34,7 @@ pub fn establish_connection_pool() -> r2d2::Pool<ConnectionManager<PgConnection>
 
     let config = r2d2::Config::default();
     let manager = ConnectionManager::<PgConnection>::new(database_url);
-    r2d2::Pool::new(config, manager).expect("Failed to create pool.")
+    Arc::new(r2d2::Pool::new(config, manager).expect("Failed to create pool."))
 }
 
 pub fn create_user<'a>(name: &'a str, password: &'a str, conn: &PgConnection) -> Result<User, Error> {

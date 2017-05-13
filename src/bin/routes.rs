@@ -14,8 +14,8 @@ use std::collections::HashMap;
 #[get("/manage/<page>")]
 pub fn pages(page: &str, login: UserLogin) -> Template {
     let mut context = HashMap::new();
-    context.insert("title",
-                   [page, " - ", login.user.username.as_ref()].concat());
+    context.insert("title", [page, " - ", login.user.username.as_ref()].concat());
+    context.insert("session_key", login.session.key);
     Template::render(["pages/", page].concat(), &context)
 }
 
