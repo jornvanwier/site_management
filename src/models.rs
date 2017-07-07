@@ -1,5 +1,4 @@
-use super::schema::users;
-use super::schema::sessions;
+use super::schema::*;
 use super::argon2;
 use super::rand_str;
 use std::time::{Duration, SystemTime};
@@ -8,12 +7,40 @@ use diesel::result::Error;
 use diesel::prelude::*;
 use SESSION_LENGTH;
 
-#[derive(Debug, Queryable)]
+#[derive(Debug, Queryable, Identifiable, Associations)]
+#[has_many(users)]
+pub struct Organization {
+    pub id: i32,
+    pub name: String
+}
+
+impl Organization {
+    fn users(&self, connection: &PgConnection) -> Result<Vec<User>, Error> {
+        User::belonging_to(self).load(&*connection)
+    }
+}
+
+#[derive(Insertable)]
+#[table_name="organizations"]
+pub struct NewOrganization<'a> {
+    pub name: &'a str
+}
+
+impl<'a> NewOrganization<'a> {
+    fn new(name: &'a str) -> NewOrganization {
+        NewOrganization { name }
+    }
+}
+
+#[derive (Debug, Queryable, Identifiable, Associations)]
+#[has_many(sessions)]
+#[belongs_to(Organization)]
 pub struct User {
     pub id: i32,
     pub username: String,
     pub password: String,
     pub salt: String,
+    pub organization_id: i32
 }
 
 #[derive(Insertable)]
@@ -36,7 +63,9 @@ impl<'a> NewUser<'a> {
     }
 }
 
-#[derive(Debug, Queryable)]
+#[derive(Debug, Queryable, Associations, Identifiable)]
+#[belongs_to(User)]
+#[primary_key(key)]
 pub struct Session {
     pub key: String,
     user_id: i32,

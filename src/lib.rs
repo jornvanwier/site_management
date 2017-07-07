@@ -10,6 +10,7 @@ extern crate rocket;
 pub mod models;
 pub mod schema;
 pub mod user_login;
+pub mod connection_from_pool;
 mod argon2;
 
 use diesel::prelude::*;
@@ -22,7 +23,6 @@ use rand::{Rng};
 use self::models::*;
 use std::sync::Arc;
 
-pub type ConnectionPool =  Arc<r2d2::Pool<ConnectionManager<PgConnection>>>;
 pub const SESSION_LENGTH: u64 = 60 * 60 * 48;
 pub const SESSION_COOKIE: &'static str = "SESSION_KEY";
 
@@ -71,8 +71,10 @@ pub fn create_session(user: &User, conn: &PgConnection) -> Result<Session, Error
     use schema::sessions;
 
     // Remove other sessions for this user
-    let num_deleted = diesel::delete(sessions::table.filter(sessions::user_id.eq(user.id)))
-        .execute(conn)?;
+    // let num_deleted = diesel::delete(sessions::table.filter(sessions::user_id.eq(user.id)))
+        // .execute(conn)?;
+
+    let num_deleted = diesel::delete(Session::belonging_to(user)).execute(conn)?;
 
     if cfg!(debug_assertions) {
         println!("Deleted {} rows", num_deleted);

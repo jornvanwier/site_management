@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS Users, Sessions CASCADE;
+DROP TABLE IF EXISTS Users, Sessions, Organizations, Images CASCADE;

@@ -1,11 +1,11 @@
 use super::models::{Session, User};
 
-use rocket::Outcome::{self, Failure, Success};
+use rocket::Outcome::{Failure, Success};
 use rocket::http::Status;
-use rocket::request::{self, Request, FromRequest, State};
-use super::ConnectionPool;
+use rocket::request::{self, Request, FromRequest};
 use diesel::prelude::*;
 
+use connection_from_pool::ConnectionFromPool;
 use SESSION_COOKIE;
 
 pub struct UserLogin {
@@ -14,8 +14,7 @@ pub struct UserLogin {
 }
 
 impl UserLogin {
-    pub fn from_key(key: String, pool: &ConnectionPool)-> request::Outcome<Self, String> {
-        let conn = pool.get().unwrap();
+    pub fn from_key(key: String, conn: ConnectionFromPool)-> request::Outcome<Self, String> {
         use schema::sessions;
         if let Ok(session) = sessions::table
                 .filter(sessions::key.eq(key))
@@ -36,12 +35,11 @@ impl<'a, 'r> FromRequest<'a, 'r> for UserLogin {
             req.cookies()
                 .find(SESSION_COOKIE)
                 .map(|c| c.value().to_string()) {
-            if let Outcome::Success(pool) =
-                State::<ConnectionPool>::from_request(req) {
-                    return UserLogin::from_key(session_key, &*pool)
-            }
-
+                    if let Success(connection) = ConnectionFromPool::from_request(req) {
+                        return UserLogin::from_key(session_key, connection)
+                    }
         }
+
         Failure((Status::Unauthorized, "Couldn't parse session key".to_string()))
     }
 }

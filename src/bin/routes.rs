@@ -1,6 +1,5 @@
 use site_management::*;
 use site_management::user_login::UserLogin;
-use rocket::State;
 use rocket::http::{Status, Cookies, Cookie};
 use rocket::request::{Form, Request};
 use rocket::response::{Failure, NamedFile};
@@ -10,6 +9,8 @@ use diesel;
 use diesel::prelude::*;
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
+
+use connection_from_pool::ConnectionFromPool;
 
 #[get("/manage/<page>")]
 pub fn pages(page: &str, login: UserLogin) -> Template {
@@ -62,10 +63,9 @@ pub struct Credentials {
 #[post("/auth", data="<credentials>")]
 pub fn auth(credentials: Form<Credentials>,
             cookies: &Cookies,
-            pool: State<ConnectionPool>)
+            conn: ConnectionFromPool)
             -> Result<Redirect, Failure> {
     let credentials = credentials.into_inner();
-    let conn = pool.get().unwrap();
 
     match authenticate_user(&credentials.username, &credentials.password, &conn) {
         Some(s) => {
@@ -80,11 +80,9 @@ pub fn auth(credentials: Form<Credentials>,
 #[get("/logout")]
 pub fn logout(login: UserLogin,
               cookies: &Cookies,
-              pool: State<ConnectionPool>)
+              conn: ConnectionFromPool)
               -> Result<Redirect, Failure> {
     cookies.remove(SESSION_COOKIE);
-
-    let conn = pool.get().unwrap();
 
     use schema::sessions;
     match diesel::delete(sessions::table.filter(sessions::key.eq(login.session.key)))
