@@ -8,39 +8,36 @@ use diesel::prelude::*;
 use SESSION_LENGTH;
 
 #[derive(Debug, Queryable, Identifiable, Associations)]
-#[has_many(users)]
-pub struct Organization {
+pub struct Website {
     pub id: i32,
     pub name: String
 }
 
-impl Organization {
-    fn users(&self, connection: &PgConnection) -> Result<Vec<User>, Error> {
-        User::belonging_to(self).load(&*connection)
-    }
+impl Website {
+    // fn users(&self, connection: &PgConnection) -> Result<Vec<User>, Error> {
+    //     User::belonging_to(self).load(&*connection)
+    // }
 }
 
 #[derive(Insertable)]
-#[table_name="organizations"]
-pub struct NewOrganization<'a> {
+#[table_name="websites"]
+pub struct NewWebsite<'a> {
     pub name: &'a str
 }
 
-impl<'a> NewOrganization<'a> {
-    fn new(name: &'a str) -> NewOrganization {
-        NewOrganization { name }
+impl<'a> NewWebsite<'a> {
+    fn new(name: &'a str) -> NewWebsite {
+        NewWebsite { name }
     }
 }
 
 #[derive (Debug, Queryable, Identifiable, Associations)]
 #[has_many(sessions)]
-#[belongs_to(Organization)]
 pub struct User {
     pub id: i32,
     pub username: String,
     pub password: String,
-    pub salt: String,
-    pub organization_id: i32
+    pub salt: String
 }
 
 #[derive(Insertable)]
