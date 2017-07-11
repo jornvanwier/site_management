@@ -3,6 +3,9 @@ CREATE TABLE Websites (
   name VARCHAR(32) NOT NULL
 );
 
+CREATE UNIQUE INDEX website_name_index
+  ON Websites(name);
+
 CREATE TABLE Users (
   id       SERIAL PRIMARY KEY,
   username VARCHAR(32) NOT NULL,

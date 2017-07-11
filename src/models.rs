@@ -10,38 +10,58 @@ use SESSION_LENGTH;
 #[derive(Debug, Queryable, Identifiable, Associations)]
 pub struct Website {
     pub id: i32,
-    pub name: String
+    pub name: String,
 }
 
 impl Website {
-    // fn users(&self, connection: &PgConnection) -> Result<Vec<User>, Error> {
-    //     User::belonging_to(self).load(&*connection)
-    // }
-}
-
-#[derive(Insertable)]
-#[table_name="websites"]
-pub struct NewWebsite<'a> {
-    pub name: &'a str
-}
-
-impl<'a> NewWebsite<'a> {
-    fn new(name: &'a str) -> NewWebsite {
-        NewWebsite { name }
+    pub fn get_users(&self, conn: &PgConnection) -> Result<Vec<(bool, User)>, Error> {
+        Ok(
+            UserWebsite::belonging_to(self)
+                .inner_join(users::table)
+                .load(conn)?
+                .into_iter()
+                .map(|(uw, u)| {
+                    let uw: UserWebsite = uw;
+                    (uw.admin, u)
+                })
+                .collect(),
+        )
     }
 }
 
-#[derive (Debug, Queryable, Identifiable, Associations)]
+#[derive(Insertable)]
+#[table_name = "websites"]
+pub struct NewWebsite<'a> {
+    pub name: &'a str,
+}
+
+#[derive(Debug, Queryable, Identifiable, Associations)]
 #[has_many(sessions)]
 pub struct User {
     pub id: i32,
     pub username: String,
     pub password: String,
-    pub salt: String
+    pub salt: String,
+}
+
+impl User {
+    pub fn get_websites(&self, conn: &PgConnection) -> Result<Vec<(bool, Website)>, Error> {
+        Ok(
+            UserWebsite::belonging_to(self)
+                .inner_join(websites::table)
+                .load(conn)?
+                .into_iter()
+                .map(|(uw, w)| {
+                    let uw: UserWebsite = uw;
+                    (uw.admin, w)
+                })
+                .collect(),
+        )
+    }
 }
 
 #[derive(Insertable)]
-#[table_name="users"]
+#[table_name = "users"]
 pub struct NewUser<'a> {
     pub username: &'a str,
     pub password: String,
@@ -50,7 +70,7 @@ pub struct NewUser<'a> {
 
 impl<'a> NewUser<'a> {
     pub fn new(username: &'a str, password_plain: &'a str) -> NewUser<'a> {
-        let salt = rand_str(64);
+        let salt = rand_str(64).to_uppercase();
         let password_hash = argon2::hash_argon2(&password_plain, &salt);
         NewUser {
             username: username,
@@ -58,6 +78,17 @@ impl<'a> NewUser<'a> {
             salt: salt,
         }
     }
+}
+
+#[derive(Debug, Queryable, Identifiable, Associations, Insertable)]
+#[primary_key(user_id, website_id)]
+#[table_name = "userwebsites"]
+#[belongs_to(User)]
+#[belongs_to(Website)]
+pub struct UserWebsite {
+    pub user_id: i32,
+    pub website_id: i32,
+    pub admin: bool,
 }
 
 #[derive(Debug, Queryable, Associations, Identifiable)]
@@ -72,17 +103,14 @@ pub struct Session {
 impl Session {
     pub fn user(&self, conn: &PgConnection) -> Result<User, Error> {
         use schema::users;
-        let mut user = users::table
+        Ok(users::table
             .filter(users::id.eq(self.user_id))
-            .first::<User>(conn)?;
-        
-        user.username = user.username.trim().to_string();
-        Ok(user)
+            .first::<User>(conn)?)
     }
 }
 
 #[derive(Insertable)]
-#[table_name="sessions"]
+#[table_name = "sessions"]
 pub struct NewSession {
     pub key: String,
     pub user_id: i32,
@@ -103,3 +131,31 @@ impl NewSession {
     }
 }
 
+#[derive(Debug, Queryable, Identifiable, Associations)]
+#[belongs_to(Website)]
+#[belongs_to(User, foreign_key = "uploaded_by")]
+pub struct Image {
+    id: i32,
+    website_id: i32,
+    uploaded_by: i32,
+    filename: String,
+    upload_date: SystemTime,
+}
+
+pub struct NewImage<'a> {
+    website_id: i32,
+    uploaded_by: i32,
+    filename: &'a str,
+    upload_date: SystemTime
+}
+
+impl<'a> NewImage<'a> {
+    pub fn new(website_id: i32, user_id: i32, filename: &'a str) -> NewImage {
+        NewImage {
+            website_id: website_id,
+            uploaded_by: user_id,
+            filename: filename,
+            upload_date: SystemTime::now()
+        }
+    }
+}
