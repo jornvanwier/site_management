@@ -2,6 +2,7 @@ use super::schema::*;
 use super::argon2;
 use super::rand_str;
 use std::time::{Duration, SystemTime};
+use diesel;
 use diesel::pg::PgConnection;
 use diesel::result::Error;
 use diesel::prelude::*;
@@ -27,6 +28,21 @@ impl Website {
                 .collect(),
         )
     }
+
+    pub fn get_by_id(id: i32, conn: &PgConnection) -> Result<Website, Error> {
+        Ok(websites::table.find(id).first(conn)?)
+    }
+
+    pub fn add_user(&self, user: &User, admin: bool, conn: &PgConnection) -> Result<(), Error> {
+        diesel::insert(&UserWebsite {
+            user_id: user.id,
+            website_id: self.id,
+            admin: admin,
+        }).into(userwebsites::table)
+            .execute(conn)?;
+
+        Ok(())
+    }
 }
 
 #[derive(Insertable)]
@@ -42,9 +58,15 @@ pub struct User {
     pub username: String,
     pub password: String,
     pub salt: String,
+    pub superadmin: bool,
 }
 
 impl User {
+    pub fn get_by_name<'a>(name: &'a str, conn: &PgConnection) -> Result<User, Error> {
+        use super::schema::users::dsl::*;
+        users.filter(username.eq(name)).first(conn)
+    }
+
     pub fn get_websites(&self, conn: &PgConnection) -> Result<Vec<(bool, Website)>, Error> {
         Ok(
             UserWebsite::belonging_to(self)
@@ -57,6 +79,40 @@ impl User {
                 })
                 .collect(),
         )
+    }
+
+    pub fn get_website(
+        &self,
+        website_id: i32,
+        conn: &PgConnection,
+    ) -> Result<(bool, Website), Error> {
+        let (uw, w): (UserWebsite, Website) = userwebsites::table
+            .find((self.id, website_id))
+            .inner_join(websites::table)
+            .first(conn)?;
+
+        Ok((uw.admin, w))
+    }
+
+    pub fn is_admin_of(&self, website_id: i32, conn: &PgConnection) -> bool {
+        if self.superadmin {
+            return true;
+        }
+
+        let result = self.get_website(website_id, conn).map(
+            |(admin, _)| {
+                admin
+            }
+        );
+        if result.is_err() {
+            return false;
+        }
+
+        result.unwrap()
+    }
+
+    pub fn is_member_of(&self, website_id: i32, conn: &PgConnection) -> bool {
+        self.get_website(website_id, conn).is_ok()
     }
 }
 
@@ -142,11 +198,13 @@ pub struct Image {
     upload_date: SystemTime,
 }
 
+#[derive(Insertable)]
+#[table_name = "images"]
 pub struct NewImage<'a> {
     website_id: i32,
     uploaded_by: i32,
     filename: &'a str,
-    upload_date: SystemTime
+    upload_date: SystemTime,
 }
 
 impl<'a> NewImage<'a> {
@@ -155,7 +213,7 @@ impl<'a> NewImage<'a> {
             website_id: website_id,
             uploaded_by: user_id,
             filename: filename,
-            upload_date: SystemTime::now()
+            upload_date: SystemTime::now(),
         }
     }
 }

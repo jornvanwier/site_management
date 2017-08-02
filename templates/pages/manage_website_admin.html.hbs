@@ -1,0 +1,19 @@
+{{#*inline "page"}}
+<p>Management for {{title}}</p>
+<ul>
+{{#each user_listings}}
+    {{#if admin}}
+        <li>Baas {{name}} <a href="/manage/{{website_id}}/admin/remove_user/{{id}}" class="line_end_button">Remove</a></li>
+    {{else}}
+        <li>Lid {{name}} <a href="/manage/{{website_id}}/admin/remove_user/{{id}}" class="line_end_button">Remove</a></li>
+    {{/if}}
+</ul>
+{{/each}}
+
+<p>Add a new user</p>
+<form action="/manage/{{website_id}}/admin/new_user" method="post">
+    <input type="text" name="username" placeholder="Username">
+    <input type="checkbox" name="admin">
+    <input type="submit" name="submit" value="Submit">
+</form>
+{{/inline}} {{> layout }}

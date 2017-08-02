@@ -1,0 +1,8 @@
+{{#*inline "page"}}
+<p>Gallery of all images {{website_name}}</p>
+<form action="http://localhost:9555/upload/{{website_id}}/{{session_key}}/images" method="post" enctype="multipart/form-data">
+    Select image to upload:
+    <input type="file" name="fileToUpload" id="fileToUpload" multiple>
+    <input type="submit" value="Upload Image" name="submit">
+</form>
+{{/inline}} {{> layout }}

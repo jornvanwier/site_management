@@ -1,0 +1,14 @@
+{{#*inline "page"}}
+<p>Management home. Please choose a website</p>
+{{#each websites}}
+    {{#if admin}}
+        <a href="/manage/{{website_id}}/home">Baas {{website_name}}</a>
+    {{else}}
+        <a href="/manage/{{website_id}}/home">Lid {{website_name}}</a>
+    {{/if}}
+{{/each}}
+{{#if superadmin}} {{! Superadmins are administrators of the entire system and have the rights to add new websites }}
+    <p>Add a new website</p>
+    <a href="/manage/new_website" class="large_button">New</a>
+{{/if}}
+{{/inline}} {{> layout }}

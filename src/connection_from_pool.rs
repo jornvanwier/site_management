@@ -6,27 +6,21 @@ use diesel::pg::PgConnection;
 use rocket::Outcome::*;
 use rocket::request::{self, State, Request, FromRequest};
 
-type ConnectionPool =  Arc<Pool<ConnectionManager<PgConnection>>>;
+type ConnectionPool = Arc<Pool<ConnectionManager<PgConnection>>>;
 
 pub struct ConnectionFromPool(PooledConnection<ConnectionManager<PgConnection>>);
 
 impl<'a, 'r> FromRequest<'a, 'r> for ConnectionFromPool {
     type Error = ();
 
-        fn from_request(request: &'a Request<'r>) -> request::Outcome<ConnectionFromPool, ()> {
-            if let Success(pool) = State::<ConnectionPool>::from_request(request) {
-                return if let Ok(result) = pool.get() {
-                    Success(ConnectionFromPool(result))
-                }
-                else {
-                    Forward(())
-                }
-
-                
+    fn from_request(request: &'a Request<'r>) -> request::Outcome<ConnectionFromPool, ()> {
+        if let Success(pool) = State::<ConnectionPool>::from_request(request) {
+            if let Ok(result) = pool.get() {
+                return Success(ConnectionFromPool(result));
             }
-
-            Forward(())
         }
+        Forward(())
+    }
 }
 
 impl Deref for ConnectionFromPool {
